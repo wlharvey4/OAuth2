@@ -3,8 +3,8 @@
 #+title:All About OAuth2
 #+subtitle:{{{version}}} {{{date}}}
 #+author:lolh
-#+date:2020-12-18 09:38
-#+macro:version Version 0.0.1
+#+date:2020-12-18 11:22
+#+macro:version Version 0.0.2
 #+macro:upload-date (eval (current-time-string))
 #+bucket:pinecone-forest.com
 
@@ -725,6 +725,307 @@ used to make requests to the API on behalf of a user.
     :PROPERTIES:
     :uri:      https://docs.github.com/en/free-pro-team@latest/developers/apps/creating-a-custom-badge-for-your-oauth-app
     :END:
+** Authentication using OctoKit
+   :PROPERTIES:
+   :uri:      https://github.com/octokit/core.js#authentication
+   :END:
+"Extendable client for GitHub's REST & GraphQL APIs"
+
+- [[https://github.com/octokit/core.js][octokit/core repo]]
+
+~@octokit/core~  is a  minimalistic library  to utilize  GitHub's REST  API and
+GraphQL API which you can extend with plugins as needed.
+
+If  you   don't  need   the  Plugin  API   then  using   [[https://github.com/octokit/request.js][@octokit/request]]  or
+[[https://docs.github.com/en/free-pro-team@latest/graphql][@octokit/graphql]] directly is a good alternative.
+
+In the browser, load ~@octokit/core~ directly from ~cdn.skypack.dev~:
+: <script type="module">import { Octokit } from "https://cdn.skypack.dev/@octokit/core";</script>
+
+Using Node.js, install with ~npm~ then ~require~ or ~import~ the library.
+: npm install @octokit/core
+: const { Octokit } = require("@octokit/core");
+: // or
+: import { Octokit } from "@octokit/core";
+
+Here is a minimal example of its use:
+
+#+begin_src js
+  // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
+  const octokit = new Octokit({ auth: `personal-access-token123` });
+
+  const response = await octokit.request("GET /orgs/{org}/repos", {
+    org: "octokit",
+    type: "private",
+  });
+#+end_src
+
+See
+- [[https://github.com/octokit/request.js][@octokit/request]] for full documentation of the ~.request~ method.
+
+*** OctoKit Object Options
+ Here are the available options:
+  - authStrategy :: (function) defaults to ~@octokit/auth-token~.
+  - auth ::
+  - baseURL :: for use with GitHub Enterprise Server
+  - previews ::  Some REST API endpoints  require preview headers to  be set, or
+    enable  additional features.  Preview headers  can be  set on  a per-request
+    basis, e.g.
+  - request ::
+  - timeZone ::
+  - userAgent ::
+
+  #+begin_src js
+    const octokit = new Octokit({
+      option1: value,
+      option2: value,
+    })
+  #+end_src
+
+**** OctoKit Token Authentication Strategy
+     :PROPERTIES:
+     :uri:      https://github.com/octokit/auth-token.js
+     :END:
+
+  - [[https://github.com/octokit/auth-token.js][@octokit/auth-token.js]]
+
+  By default, Octokit authenticates using the =token= authentication strategy.
+  - Pass in a token using ~options.auth~
+    #+begin_src js
+      import { Octokit } from "@octokit/core";
+
+      const octokit = new Octokit({
+	auth: "mypersonalaccesstoken123",
+      });
+
+      const { data } = await octokit.request("/user");
+    #+end_src
+
+  - It can be:
+    - a personal access token
+    - an OAuth token
+    - an installation access token
+    - a JSON Web Token for GitHub App authentication
+
+  - The =Authorization= header will be set according to the type of token.
+
+  #+cindex:authentication strategy
+  To use a different authentication strategy, set =options.authStrategy=
+  - A set of officially supported authentication strategies can be retrieved from
+    [[*OctoKit Auth-App Authentication Strategies][@octokit/auth-app]]
+
+    #+begin_src js
+      import { Octokit } from "@octokit/core";
+      import { createAppAuth } from "@octokit/auth-app";
+
+      const appOctokit = new Octokit({
+	authStrategy: createAppAuth,
+	auth: {
+	  appId: 123,
+	  privateKey: process.env.PRIVATE_KEY,
+	},
+      });
+
+      const { data } = await appOctokit.request("/app");
+    #+end_src
+
+**** OctoKit Auth-App Authentication Strategies
+     :PROPERTIES:
+     :uri:      https://github.com/octokit/auth-app.js
+     :END:
+   "GitHub App authentication for JavaScript"
+
+   - https://github.com/octokit/auth-app.js
+
+   ~@octokit/auth-app~ implements  authentication for  GitHub Apps using  JSON Web
+   Token and installation access tokens.
+
+In the browser, load ~@octokit/auth-app~ directly from ~cdn.skypack.dev~
+: <script type="module">import { createAppAuth } from "https://cdn.skypack.dev/@octokit/auth-app";</script>
+
+- NOTE ::
+  For  usage  in  browsers:  The  private   keys  provided  by  GitHub  are  in
+  =PKCS#1format=, but the  =WebCrypto= API only supports =PKCS#8=.  You need to
+  convert it first:
+
+  : openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private-key.pem -out private-key-pkcs8.key
+
+  No conversation is needed in Node, both PKCS#1 and PKCS#8 format will work.
+
+Using Node.js install with
+: npm install @octokit/auth-app
+: const { createAppAuth } = require("@octokit/auth-app");
+: // or:
+: import { createAppAuth } from "@octokit/auth-app";
+
+***** CreateAppAuth Options
+ - appId :: (number) *Required*
+ - privateKey :: (string) *Required*
+ - installationId :: (number)
+ - clientId :: (string)
+ - clientSecret :: (string)
+ - request :: (function)
+ - cache :: (object)
+ - log :: (object)
+
+***** Auth Options
+ - type  ::  (string)  *Required*  Must be  either
+   - "app",
+   - "installation", or
+   - "oauth"
+ - installationId :: (number) *Required* if =type= is set to "installation"
+ - repositoryIds ::
+ - permissions ::
+ - factory ::
+ - refresh ::
+
+ - code :: (string) relevant if type is set to "oauth";
+
+   The authorization code which was passed as =query= parameter to the callback
+   URL from the OAuth web application flow.
+
+ - redirectUrl :: (string) relevant if type is set to "oauth".
+
+   The URL  in your application where  users are sent after  authorization. See
+   redirect urls.
+
+ - state :: (string) relevant if type is set to "oauth".
+
+   The  unguessable random  string you  provided  in Step  1 of  the OAuth  web
+   application flow.
+
+
+***** Authentication Object
+There are three possible results:
+ 1. JSON Web Token (JWT) authentication
+    - type :: (string) "app"
+    - token :: (string) The JSON Web Token (JWT) to authenticate as the app.
+    - appId :: (number) GitHub App database ID.
+    - expiresAt :: (string) Timestamp in UTC format
+
+      A      =Date=     object      can     be      created     using      ~new
+      Date(authentication.expiresAt)~.
+
+ 2. Installation access token authentication
+    - type ::
+    - token ::
+    - tokenType ::
+    - installationId ::
+    - createdAt ::
+    - expiresAt ::
+    - repositoryIds ::
+    - permissions ::
+    - singleFileName ::
+
+ 3. OAuth access token authentication
+    - type :: (string) "token"
+    - token :: (string) The personal access token
+    - tokenType :: "oauth"
+    - scopes :: array of scope names enabled for the token
+
+***** Example Code
+#+begin_src js
+  const auth = createAppAuth({
+    appId: 1,
+    privateKey: "-----BEGIN PRIVATE KEY-----\n...",
+    installationId: 123,
+    clientId: "1234567890abcdef1234",
+    clientSecret: "1234567890abcdef12341234567890abcdef1234",
+  });
+
+  // Retrieve JSON Web Token (JWT) to authenticate as app
+  const appAuthentication = await auth({ type: "app" });
+  // resolves with
+  // {
+  //   type: 'app',
+  //   token: 'jsonwebtoken123',
+  //   appId: 123,
+  //   expiresAt: '2018-07-07T00:09:30.000Z'
+  // }
+
+  // Retrieve installation access token
+  const installationAuthentication = await auth({ type: "installation" });
+  // resolves with
+  // {
+  //   type: 'token',
+  //   tokenType: 'installation',
+  //   token: 'token123',
+  //   installationId: 123,
+  //   createdAt: '2018-07-07T00:00:00.000Z'
+  //   expiresAt: '2018-07-07T00:59:00.000Z'
+  // }
+
+  // Retrieve an oauth-access token
+  const oauthAuthentication = await auth({ type: "oauth", code: "123456" });
+  // resolves with
+  // {
+  //   type: 'token',
+  //   tokenType: 'oauth',
+  //   token: 'token123',
+  //   scopes: []
+  // }
+#+end_src
+
+***** Auth Hook
+~auth.hook()~  hooks  directly into  the  request  life  cycle. It  amends  the
+=request= to authenticate either as app or as installation based on the request
+URL. It  also automatically sets  the "machine-man" preview which  is currently
+required for all endpoints requiring JWT authentication.
+
+: auth.hook(request, route, parameters)
+: auth.hook(request, options)
+
+The =request= option is an instance  of [[https://github.com/octokit/request.js#readme][@octokit/request]]. The arguments are the
+same as for the ~request()~ method.
+
+~auth.hook()~ can be called directly to send an authenticated request:
+
+#+begin_src js
+  const { data: installations } = await auth.hook(
+    request,
+    "GET /app/installations"
+  );
+#+end_src
+
+Or it can be passed as option to ~request()~.
+
+#+begin_src js
+  const requestWithAuth = request.defaults({
+    request: {
+      hook: auth.hook,
+    },
+  });
+
+  const { data: installations } = await requestWithAuth("GET /app/installations");
+#+end_src
+
+Note that ~auth.hook()~ does not create  and set an OAuth authentication token.
+But  you can  use [[https://github.com/octokit/auth-oauth-app.js#readme][@octokit/auth-oauth-app]]  for that  functionality.
+
+And if you don't plan on sending requests to routes that require authentication
+with =client_id= and =client_secret=, you can  just retrieve the token and then
+create a new instance of ~request()~ with the authentication header set:
+
+#+begin_src js
+  const { token } = await auth({
+    type: "oauth",
+    code: "123456",
+  });
+  const requestWithAuth = request.defaults({
+    headers: {
+      authentication: `token ${token}`,
+    },
+  });
+#+end_src
+
+**** Auth OAuth App
+     :PROPERTIES:
+     :uri:      https://github.com/octokit/auth-oauth-app.js
+     :END:
+"GitHub OAuth App authentication for JavaScript"
+
+It implements authentication using an OAuth  app’s client ID and secret as well
+as OAuth access tokens in exchange for a code from the web application flow.
 
 * Build Tools
 :PROPERTIES:

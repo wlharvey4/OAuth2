@@ -3,8 +3,8 @@
 #+title:All About OAuth2
 #+subtitle:{{{version}}} {{{date}}}
 #+author:lolh
-#+date:2020-12-18 11:22
-#+macro:version Version 0.0.2
+#+date:2020-12-19 08:34
+#+macro:version Version 0.0.3
 #+macro:upload-date (eval (current-time-string))
 #+bucket:pinecone-forest.com
 
@@ -1022,12 +1022,40 @@ create a new instance of ~request()~ with the authentication header set:
      :PROPERTIES:
      :uri:      https://github.com/octokit/auth-oauth-app.js
      :END:
-"GitHub OAuth App authentication for JavaScript"
+"GitHub OAuth App authentication for JavaScript: implements one of GitHub's
+authentication strategies."
 
-It implements authentication using an OAuth  app’s client ID and secret as well
-as OAuth access tokens in exchange for a code from the web application flow.
+- [[https://github.com/octokit/auth-oauth-app.js][octokit/auth-oauth-app]]
 
-* Build Tools
+It implements authentication using an OAuth  app’s
+- client ID and secret as well as
+- OAuth access tokens in exchange for
+- a code from the web application flow.
+
+Load ~@octokit/auth-oauth-app~ directly from ~cdn.skypack.dev~
+: <script type="module"> import { createOAuthAppAuth } from "https://cdn.skypack.dev/@octokit/auth-oauth-app"; </script>
+
+In Node.js, install with
+: npm install @octokit/auth-oauth-app
+: const { createOAuthAppAuth } = require("@octokit/auth-oauth-app");
+: // or:
+: import { createOAuthAppAuth } from "@octokit/auth-oauth-app";
+
+***** Create OAuth App Auth Method
+The ~createOAuthAppAuth~ method accepts a single =options= parameter
+- clientId  :: (string)  *Required* Find  your OAuth  app’s Client  ID in  your
+  account’s developer settings.
+- clientSectret :: (string)  *Required* Find your OAuth app’s  Client Secret in
+  your account’s developer settings.
+- code :: (string)  The authorization code which was passed  as query parameter
+  to the callback URL from the OAuth web application flow.
+- redirectUrl ::  (string) The  URL in  your application  where users  are sent
+  after authorization. See redirect urls.
+- state :: (string) The unguessable random string you provided in Step 1 of the
+  OAuth web application flow.
+- requrest :: (function) You can pass in your own ~@octokit/request~ instance.
+
+* BUILD Tools
 :PROPERTIES:
 :appendix: t
 :custom_id: build-tools

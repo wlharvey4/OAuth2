@@ -3,8 +3,8 @@
 #+title:All About OAuth2
 #+subtitle:{{{version}}} {{{date}}}
 #+author:lolh
-#+date:2020-12-19 08:34
-#+macro:version Version 0.0.3
+#+date:2020-12-19 16:05
+#+macro:version Version 0.0.4
 #+macro:upload-date (eval (current-time-string))
 #+bucket:pinecone-forest.com
 
@@ -1027,7 +1027,7 @@ authentication strategies."
 
 - [[https://github.com/octokit/auth-oauth-app.js][octokit/auth-oauth-app]]
 
-It implements authentication using an OAuth  app’s
+It implements authentication using an OAuth app’s
 - client ID and secret as well as
 - OAuth access tokens in exchange for
 - a code from the web application flow.
@@ -1041,8 +1041,14 @@ In Node.js, install with
 : // or:
 : import { createOAuthAppAuth } from "@octokit/auth-oauth-app";
 
+=Client ID= and  =secret= can be passed as =Basic  auth= in the =Authorization=
+header  in  order to  get  a  higher  rate  limit compared  to  unauthenticated
+requests. This is meant for the use on servers only.
+
 ***** Create OAuth App Auth Method
-The ~createOAuthAppAuth~ method accepts a single =options= parameter
+The ~createOAuthAppAuth(options)~  method accepts a single  =options= parameter
+with the following possible keys:
+
 - clientId  :: (string)  *Required* Find  your OAuth  app’s Client  ID in  your
   account’s developer settings.
 - clientSectret :: (string)  *Required* Find your OAuth app’s  Client Secret in
@@ -1055,6 +1061,76 @@ The ~createOAuthAppAuth~ method accepts a single =options= parameter
   OAuth web application flow.
 - requrest :: (function) You can pass in your own ~@octokit/request~ instance.
 
+***** Auth Method
+The  ~async  auth(options)~  method returned  by  ~createOAuthAppAuth(options)~
+accepts the following options:
+
+- type :: (string) *Required* "oauth-app" or "token"
+- code  ::  (string) Only  relevant if  =options.type= is  set to  "token". The
+  authorization code  which was passed as  query parameter to the  callback URL
+  from the OAuth web application flow. Defaults to what was set in the strategy
+  options.
+- redirectUrl :: (string) Only relevant if  =options.type= is set to "token". The
+  URL  in  your application  where  users  are  sent after  authorization.  See
+  redirect urls. Defaults to what was set in the strategy options.
+- state  ::  (string) Only relevant  if =options.type=  is set to  "token". The
+  unguessable random string you provided in Step 1 of the OAuth web application
+  flow. Defaults to what was set in the strategy options.
+
+***** Authentication Object
+The ~async  auth(options)~ method  returns one  of two  possible authentication
+objects.
+
+1. =OAuth authentication= if =clientId= and =clientSecret= options were passed.
+2. =OAuth access token authentication= if =code= option was passed.
+
+****** OAuth Authentication
+- type :: (string) "oauth-app"
+- clientId :: (string) The client ID as passed to the constructor.
+- clientSecret :: (string) The client secret as passed to the constructor.
+- headers :: (object) ={ authorization }=
+
+****** OAuth access token authentication
+- type :: (string) "token"
+- token :: (string) The personal access token
+- tokenType :: (string) "oauth"
+- scopes :: ([strings]) array of scope names enabled for the token
+
+***** Auth Hook
+- ~auth.hook(request, route, parameters)~
+- ~auth.hook(request, options)~
+
+~auth.hook()~  hooks directly  into the  =request=  life cycle.  It amends  the
+=request= to authenticate correctly based on the =request= URL.
+
+The =request= option is an  instance of ~@octokit/request~. The =route/options=
+parameters are the same as for the ~request()~ method.
+
+~auth.hook()~ can be called directly to send an authenticated =request=.
+: const { data: user } = await auth.hook(request, "GET /user");
+
+Or it can be passed as option to ~request()~.
+
+#+begin_src js
+  const requestWithAuth = request.defaults({
+    request: {
+      hook: auth.hook,
+    },
+  });
+
+  const { data: user } = await requestWithAuth("GET /user");
+#+end_src
+
+~auth.hook~ will set the correct =Authentication= header automatically based on
+the  =request= URL.
+
+- For all  OAuth Application  endpoints, the =Authorization=  header is  set to
+  =basic= auth.
+- For all other endpoints a token  is retrieved and used in the =Authorization=
+  header. The token is cached and used for succeeding requsets.
+- The internally cached token will be  replaced and used for succeeding
+  requests. See also [[https://developer.github.com/v3/oauth_authorizations/]["the REST API documentation"]].
+- See also: [[https://github.com/octokit/oauth-authorization-url.js][octokit/oauth-authorization-url.js]].
 * BUILD Tools
 :PROPERTIES:
 :appendix: t
